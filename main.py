@@ -14,9 +14,9 @@ import re
 from memcache import Client
 
 #Settings
-button = 18 #GPIO Pin with button connected
-lights = [24, 25] # GPIO Pins with LED's conneted
-device = "plughw:1" # Name of your microphone/soundcard in arecord -L
+button = 17 #GPIO Pin with button connected
+lights = [19, 26] # GPIO Pins with LED's conneted
+device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
 #Setup
 recorded = False
@@ -54,7 +54,7 @@ def gettoken():
 		
 
 def alexa():
-	GPIO.output(24, GPIO.HIGH)
+	GPIO.output(lights[0], GPIO.HIGH)
 	url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
 	headers = {'Authorization' : 'Bearer %s' % gettoken()}
 	d = {
@@ -93,24 +93,25 @@ def alexa():
 				audio = d.split('\r\n\r\n')[1].rstrip('--')
 		with open(path+"response.mp3", 'wb') as f:
 			f.write(audio)
-		GPIO.output(25, GPIO.LOW)
+		GPIO.output(lights[1], GPIO.LOW)
 		os.system('mpg123 -q {}1sec.mp3 {}response.mp3'.format(path, path))
-		GPIO.output(24, GPIO.LOW)
+		GPIO.output(lights[0], GPIO.LOW)
 	else:
 		GPIO.output(lights, GPIO.LOW)
 		for x in range(0, 3):
 			time.sleep(.2)
-			GPIO.output(25, GPIO.HIGH)
+			GPIO.output(lights[1], GPIO.HIGH)
 			time.sleep(.2)
 			GPIO.output(lights, GPIO.LOW)
 		
 
 
 
-def start():
+def start(channel):
 	last = GPIO.input(button)
 	while True:
 		val = GPIO.input(button)
+		print "GPIO VAL: " + str(val)
 		if val != last:
 			last = val
 			if val == 1 and recorded == True:
@@ -120,7 +121,7 @@ def start():
 				inp = None
 				alexa()
 			elif val == 0:
-				GPIO.output(25, GPIO.HIGH)
+				GPIO.output(lights[1], GPIO.HIGH)
 				inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, device)
 				inp.setchannels(1)
 				inp.setrate(16000)
@@ -150,7 +151,18 @@ if __name__ == "__main__":
 	os.system('mpg123 -q {}1sec.mp3 {}hello.mp3'.format(path, path))
 	for x in range(0, 3):
 		time.sleep(.1)
-		GPIO.output(24, GPIO.HIGH)
+		GPIO.output(lights[0], GPIO.HIGH)
 		time.sleep(.1)
-		GPIO.output(24, GPIO.LOW)
-	start()
+		GPIO.output(lights[0], GPIO.LOW)
+
+        #GPIO.add_event_detect(button, GPIO.FALLING, callback=start, bouncetime=300) 
+        #try:  
+        #    while True:
+        #      a = 1
+        ##    print "Waiting for rising edge on port 24"  
+        ##    GPIO.wait_for_edge(button, GPIO.RISING)  
+        ##    print "Rising edge detected on port 24. Here endeth the third lesson."  
+        #except KeyboardInterrupt:  
+        #    GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
+        #GPIO.cleanup()           # clean up GPIO on normal exit  
+	start(0)
