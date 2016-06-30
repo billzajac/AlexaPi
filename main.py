@@ -12,8 +12,9 @@ import requests
 import json
 import re
 from memcache import Client
+import subprocess
 
-#Settings
+# Settings
 button = 17 #GPIO Pin with button connected
 
 # Button config (pull high to 1 for unpressed) - GPIO.input(button)
@@ -24,7 +25,7 @@ button_down = 0
 lights = [19, 26] # GPIO Pins with LED's conneted
 device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
-#Setup
+# Setup
 recorded = False
 servers = ["127.0.0.1:11211"]
 mc = Client(servers, debug=1)
@@ -32,10 +33,20 @@ path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
 
 
 
+def wait_for_sound_hardware():
+    print "Waiting until the sound card is ready"
+    try:
+        subprocess.check_output("arecord -L|grep plughw:CARD=Device,DEV=0", shell=True)
+	print "Sound Hardware OK"
+        return True
+    except:
+	print "Sound Hardware not ready"
+    	return False
+
 def internet_on():
     print "Checking Internet Connection"
     try:
-        r =requests.get('https://api.amazon.com/auth/o2/token')
+        r = requests.get('https://api.amazon.com/auth/o2/token')
 	print "Connection OK"
         return True
     except:
@@ -115,7 +126,7 @@ def alexa():
 
 def start(channel):
 	last = GPIO.input(button)
-        print "Please press and hold the button to ask a question."
+        print "Please press and hold the button to ask a question"
 	while True:
 		val = GPIO.input(button)
 		#print "GPIO VAL: " + str(val) # DEBUG
@@ -152,6 +163,8 @@ if __name__ == "__main__":
 	GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
 	GPIO.setup(lights, GPIO.OUT)
 	GPIO.output(lights, GPIO.LOW)
+	while wait_for_sound_hardware() == False:
+		print "."
 	while internet_on() == False:
 		print "."
 	token = gettoken()

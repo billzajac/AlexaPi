@@ -1,12 +1,13 @@
 #! /bin/bash
 baselocation=$PWD
-apt-get update
-apt-get install libasound2-dev memcached python-pip python-alsaaudio python-aubio sox libsox-fmt-mp3
-pip install -r requirements.txt
-cp initd_alexa.sh /etc/init.d/alexa
+sudo apt-get update
+sudo apt-get install libasound2-dev memcached python-pip python-alsaaudio python-aubio sox libsox-fmt-mp3
+sudo pip install -r requirements.txt
+sudo cp initd_alexa.sh /etc/init.d/alexa
 cd /etc/rc5.d
-ln -s ../init.d/alexa S99alexa
-touch /var/log/alexa.log
+sudo ln -s ../init.d/alexa S99alexa
+sudo touch /var/log/alexa.log
+sudo chown pi.pi /var/log/alexa.log
 cd $baselocation
 echo "Enter your ProductID:"
 read productid

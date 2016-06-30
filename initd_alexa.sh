@@ -5,7 +5,7 @@ case "$1" in
 
 start)
     echo "Starting Alexa..."
-    python /root/AlexaPi/main.py &
+    sudo -i -u pi python /home/pi/AlexaPi/main.py &
 
 ;;
 

@@ -28,9 +28,9 @@ Make a note of these credentials you will be asked for them during the install p
 
 ### Installation
 
-Boot your fresh Pi and login to a command prompt as root.
+Boot your fresh Pi and login to a command prompt.
 
-Make sure you are in /root
+Make sure you are in /home/pi
 
 Clone this repo to the Pi
 `git clone https://github.com/sammachin/AlexaPi.git`
