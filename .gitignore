@@ -55,3 +55,9 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Specific to this app
+creds.py
+out.wav
+recording.wav
+response.mp3

@@ -15,6 +15,12 @@ from memcache import Client
 
 #Settings
 button = 17 #GPIO Pin with button connected
+
+# Button config (pull high to 1 for unpressed) - GPIO.input(button)
+button_pull_up_down = GPIO.PUD_UP
+button_up = 1
+button_down = 0
+
 lights = [19, 26] # GPIO Pins with LED's conneted
 device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
@@ -94,7 +100,7 @@ def alexa():
 		with open(path+"response.mp3", 'wb') as f:
 			f.write(audio)
 		GPIO.output(lights[1], GPIO.LOW)
-		os.system('mpg123 -q {}1sec.mp3 {}response.mp3'.format(path, path))
+		os.system('play -q {}1sec.mp3 {}response.mp3'.format(path, path))
 		GPIO.output(lights[0], GPIO.LOW)
 	else:
 		GPIO.output(lights, GPIO.LOW)
@@ -109,18 +115,19 @@ def alexa():
 
 def start(channel):
 	last = GPIO.input(button)
+        print "Please press and hold the button to ask a question."
 	while True:
 		val = GPIO.input(button)
-		print "GPIO VAL: " + str(val)
+		#print "GPIO VAL: " + str(val) # DEBUG
 		if val != last:
 			last = val
-			if val == 1 and recorded == True:
+			if val == button_up and recorded == True:
 				rf = open(path+'recording.wav', 'w') 
 				rf.write(audio)
 				rf.close()
 				inp = None
 				alexa()
-			elif val == 0:
+			elif val == button_down:
 				GPIO.output(lights[1], GPIO.HIGH)
 				inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, device)
 				inp.setchannels(1)
@@ -132,7 +139,7 @@ def start(channel):
 				if l:
 					audio += data
 				recorded = True
-		elif val == 0:
+		elif val == button_down:
 			l, data = inp.read()
 			if l:
 				audio += data
@@ -142,13 +149,13 @@ if __name__ == "__main__":
 	GPIO.setwarnings(False)
 	GPIO.cleanup()
 	GPIO.setmode(GPIO.BCM)
-	GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+	GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
 	GPIO.setup(lights, GPIO.OUT)
 	GPIO.output(lights, GPIO.LOW)
 	while internet_on() == False:
 		print "."
 	token = gettoken()
-	os.system('mpg123 -q {}1sec.mp3 {}hello.mp3'.format(path, path))
+	os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
 	for x in range(0, 3):
 		time.sleep(.1)
 		GPIO.output(lights[0], GPIO.HIGH)
@@ -165,4 +172,8 @@ if __name__ == "__main__":
         #except KeyboardInterrupt:  
         #    GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
         #GPIO.cleanup()           # clean up GPIO on normal exit  
-	start(0)
+        try:
+	    start(0)
+        except KeyboardInterrupt:  
+            GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
+        GPIO.cleanup()           # clean up GPIO on normal exit  
