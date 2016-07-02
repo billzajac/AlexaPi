@@ -6,7 +6,7 @@ import signal
 import subprocess
 import random
 import time
-import RPi.GPIO as GPIO
+import CHIP_IO.GPIO as GPIO
 import alsaaudio
 import wave
 import random
@@ -17,14 +17,15 @@ import re
 from memcache import Client
 
 # Settings
-button = 17 #GPIO Pin with button connected
+button = "AP-EINT1" #GPIO Pin with button connected
 
 # Button config (pull high to 1 for unpressed) - GPIO.input(button)
-button_pull_up_down = GPIO.PUD_UP
-button_up = 1
-button_down = 0
+button_pull_up_down = GPIO.PUD_DOWN
+button_edge_detect = GPIO.FALLING
+button_up = 0
+button_down = 1
 
-lights = [19, 26] # GPIO Pins with LED's conneted
+lights = ["CSID0", "CSID2"] # GPIO Pins with LED's conneted
 device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
 # Setup
@@ -168,9 +169,9 @@ def record_and_process():
     alexa()
     
 if __name__ == "__main__":
-    GPIO.setwarnings(False)
+    #GPIO.setwarnings(False)
     GPIO.cleanup()
-    GPIO.setmode(GPIO.BCM)
+    #GPIO.setmode(GPIO.BCM)
     GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
     GPIO.setup(lights, GPIO.OUT)
     GPIO.output(lights, GPIO.LOW)
@@ -187,7 +188,7 @@ if __name__ == "__main__":
         GPIO.output(lights[0], GPIO.LOW)
 
         # GPIO.wait_for_edge(button, GPIO.RISING)  # Wait for rising edge on button pin
-        GPIO.add_event_detect(button, GPIO.FALLING, callback=button_pressed, bouncetime=300) 
+        GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
         print "Please press and hold the button to ask a question"
         try:
             while True:
