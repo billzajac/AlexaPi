@@ -171,9 +171,14 @@ if __name__ == "__main__":
     GPIO.setwarnings(False)
     GPIO.cleanup()
     GPIO.setmode(GPIO.BCM)
+
     GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
+    # GPIO.wait_for_edge(button, GPIO.RISING)  # Wait for rising edge on button pin
+    GPIO.add_event_detect(button, GPIO.FALLING, callback=button_pressed, bouncetime=300) 
+
     GPIO.setup(lights, GPIO.OUT)
     GPIO.output(lights, GPIO.LOW)
+
     while wait_for_sound_hardware() == False:
         print "."
     while internet_on() == False:
@@ -186,13 +191,11 @@ if __name__ == "__main__":
         time.sleep(.1)
         GPIO.output(lights[0], GPIO.LOW)
 
-        # GPIO.wait_for_edge(button, GPIO.RISING)  # Wait for rising edge on button pin
-        GPIO.add_event_detect(button, GPIO.FALLING, callback=button_pressed, bouncetime=300) 
-        print "Please press and hold the button to ask a question"
-        try:
-            while True:
-                time.sleep(5)
-        except KeyboardInterrupt:  
-            GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
+    print "Please press and hold the button to ask a question"
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:  
+        GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
 
-        GPIO.cleanup()           # clean up GPIO on normal exit  
+    GPIO.cleanup()           # clean up GPIO on normal exit  
