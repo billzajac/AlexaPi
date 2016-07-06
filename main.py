@@ -201,12 +201,12 @@ if __name__ == "__main__":
     for x in range(0, 3):
         time.sleep(.1)
         GPIO.output(led_r, GPIO.HIGH)
-        GPIO.output(led_y, GPIO.LOW)
+        GPIO.output(led_y, GPIO.HIGH)
         time.sleep(.1)
         GPIO.output(led_r, GPIO.LOW)
-        GPIO.output(led_y, GPIO.HIGH)
-    GPIO.output(led_y, GPIO.LOW)
+        GPIO.output(led_y, GPIO.LOW)
 
+    # Add event detection now for button
     GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
 
     print "Please press and hold the button to ask a question"
