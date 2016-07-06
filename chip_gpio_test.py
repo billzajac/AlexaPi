@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Other example: https://gist.github.com/nyboer/31855e318378bc083de551fe6305ef8a
+
 import CHIP_IO.GPIO as GPIO
 import time
 
