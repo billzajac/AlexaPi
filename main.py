@@ -173,8 +173,6 @@ if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)
 
     GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
-    # GPIO.wait_for_edge(button, GPIO.RISING)  # Wait for rising edge on button pin
-    GPIO.add_event_detect(button, GPIO.FALLING, callback=button_pressed, bouncetime=300) 
 
     GPIO.setup(lights, GPIO.OUT)
     GPIO.output(lights, GPIO.LOW)
@@ -190,6 +188,9 @@ if __name__ == "__main__":
         GPIO.output(lights[0], GPIO.HIGH)
         time.sleep(.1)
         GPIO.output(lights[0], GPIO.LOW)
+
+    # Add event detection now for button
+    GPIO.add_event_detect(button, GPIO.FALLING, callback=button_pressed, bouncetime=300) 
 
     print "Please press and hold the button to ask a question"
     try:
