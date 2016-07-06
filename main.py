@@ -140,7 +140,7 @@ def button_pressed(channel):
             # source: http://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
             process_group_id = os.getpgid(playback_subprocess_pid)
             print "Killing subprocess group ID: {}".format(process_group_id)
-            os.killpg(process_group_id, signal.SIGTERM) # send the signal to all the process groups (SIGKILL/SIGTERM)
+            os.killpg(process_group_id, signal.SIGKILL) # send the signal to all the process groups (SIGKILL/SIGTERM)
             playback_subprocess_pid = None
             print "Successful termination!"
         except:
