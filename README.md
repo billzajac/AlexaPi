@@ -68,13 +68,9 @@ The internet_on() routine is testing the connection to the Amazon auth server as
 
 The auth token is generated from the request_token the auth_token is then stored in a local memcache with and expiry of just under an hour to align with the validity at Amazon, if the function fails to get an access_token from memcache it will then request a new one from Amazon using the refresh token.
 
-
-
-
-
-
-
-
----
  
-
+Test the recording
+------------------------
+```
+aplay -r 44100 -f S16_LE -c 2 recording.wav
+```

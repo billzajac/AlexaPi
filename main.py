@@ -21,7 +21,7 @@ button = "AP-EINT1" #GPIO Pin with button connected
 
 # Button config (pull high to 1 for unpressed) - GPIO.input(button)
 button_pull_up_down = GPIO.PUD_DOWN
-button_edge_detect = GPIO.FALLING
+button_edge_detect = GPIO.RISING
 button_up = 0
 button_down = 1
 
@@ -33,7 +33,8 @@ device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in areco
 servers = ["127.0.0.1:11211"]
 mc = Client(servers, debug=1)
 path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
-playback_subprocess = None
+global playback_subprocess_pid
+playback_subprocess_pid = None
 
 def wait_for_sound_hardware():
     print "Waiting until the sound card is ready"
@@ -115,8 +116,9 @@ def alexa():
         #subprocess.call(['play', '-q', '{}1sec.mp3'.format(path), '{}response.mp3'.format(path)])
         # The os.setsid() is passed in the argument preexec_fn so it's run after the fork() and before  exec() to run the shell.
         #playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), close_fds=True, shell=True, preexec_fn=os.setsid)
-        global playback_subprocess
         playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
+        global playback_subprocess_pid
+        playback_subprocess_pid = playback_subprocess.pid
         GPIO.output(led_r, GPIO.LOW)
     else:
         GPIO.output(led_r, GPIO.LOW)
@@ -131,15 +133,15 @@ def alexa():
 
 def button_pressed(channel):
     print "BUTTON PRESSED"
-    if hasattr(playback_subprocess, 'pid'):
-        print "Subprocess exists! Let's kill it!"
+    global playback_subprocess_pid
+    if playback_subprocess_pid:
+        print "Subprocess PID exists: {} Let's kill it!".format(playback_subprocess_pid)
         try:
             # source: http://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
-            # print "Subprocess: {}".format(playback_subprocess)
-            # print "Subprocess PID: {}".format(playback_subprocess.pid)
-            process_group_id = os.getpgid(playback_subprocess.pid)
+            process_group_id = os.getpgid(playback_subprocess_pid)
             print "Killing subprocess group ID: {}".format(process_group_id)
             os.killpg(process_group_id, signal.SIGTERM) # send the signal to all the process groups (SIGKILL/SIGTERM)
+            playback_subprocess_pid = None
             print "Successful termination!"
         except:
             print "Failed to terminate process"
@@ -166,39 +168,53 @@ def record_and_process():
         val = GPIO.input(button)
 
     # Button is up now
+    print "BUTTON RELEASED"
     rf = open(path+'recording.wav', 'w') 
     rf.write(audio)
     rf.close()
     alexa()
     
 if __name__ == "__main__":
-    #GPIO.setwarnings(False)
+    # Set the global playback PID
+    # global playback_subprocess_pid
+    # playback_subprocess_pid = None
+
+    # Setup GPIOs
     GPIO.cleanup()
-    #GPIO.setmode(GPIO.BCM)
+
     GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
     GPIO.setup(led_r, GPIO.OUT)
     GPIO.setup(led_y, GPIO.OUT)
+
     GPIO.output(led_r, GPIO.LOW)
     GPIO.output(led_y, GPIO.LOW)
+
+    # Perform system checks and prep
     while wait_for_sound_hardware() == False:
         print "."
     while internet_on() == False:
         print "."
     token = gettoken()
+
     os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
+
     for x in range(0, 3):
         time.sleep(.1)
         GPIO.output(led_r, GPIO.HIGH)
+        GPIO.output(led_y, GPIO.LOW)
         time.sleep(.1)
         GPIO.output(led_r, GPIO.LOW)
+        GPIO.output(led_y, GPIO.HIGH)
+    GPIO.output(led_y, GPIO.LOW)
 
-        # GPIO.wait_for_edge(button, GPIO.RISING)  # Wait for rising edge on button pin
-        GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
-        print "Please press and hold the button to ask a question"
-        try:
-            while True:
-                time.sleep(5)
-        except KeyboardInterrupt:  
-            GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
+    GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
 
-        GPIO.cleanup()           # clean up GPIO on normal exit  
+    print "Please press and hold the button to ask a question"
+
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:  
+        GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
+
+    GPIO.cleanup()           # clean up GPIO on normal exit  
