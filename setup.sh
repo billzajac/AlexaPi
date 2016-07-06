@@ -3,6 +3,19 @@ baselocation=$PWD
 sudo apt-get update
 sudo apt-get install libasound2-dev memcached python-pip python-alsaaudio python-aubio sox libsox-fmt-mp3
 sudo pip install -r requirements.txt
+
+sudo sh -c "cat >/etc/asound.conf <<EOF
+pcm.!default {
+    type hw
+    card Device
+}
+
+ctl.!default {
+    type hw
+    card Device
+}
+EOF"
+
 sudo cp initd_alexa.sh /etc/init.d/alexa
 cd /etc/rc5.d
 sudo ln -s ../init.d/alexa S99alexa

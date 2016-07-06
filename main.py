@@ -25,7 +25,8 @@ button_edge_detect = GPIO.FALLING
 button_up = 0
 button_down = 1
 
-lights = ["CSID0", "CSID2"] # GPIO Pins with LED's conneted
+led_r = "CSID0"
+led_y = "CSID2"
 device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
 # Setup
@@ -70,7 +71,7 @@ def gettoken():
         return False
         
 def alexa():
-    GPIO.output(lights[0], GPIO.HIGH)
+    GPIO.output(led_r, GPIO.HIGH)
     url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
     headers = {'Authorization' : 'Bearer %s' % gettoken()}
     d = {
@@ -109,21 +110,23 @@ def alexa():
                 audio = d.split('\r\n\r\n')[1].rstrip('--')
         with open(path+"response.mp3", 'wb') as f:
             f.write(audio)
-        GPIO.output(lights[1], GPIO.LOW)
+        GPIO.output(led_y, GPIO.LOW)
         #os.system('play -q {}1sec.mp3 {}response.mp3'.format(path, path))
         #subprocess.call(['play', '-q', '{}1sec.mp3'.format(path), '{}response.mp3'.format(path)])
         # The os.setsid() is passed in the argument preexec_fn so it's run after the fork() and before  exec() to run the shell.
         #playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), close_fds=True, shell=True, preexec_fn=os.setsid)
         global playback_subprocess
         playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
-        GPIO.output(lights[0], GPIO.LOW)
+        GPIO.output(led_r, GPIO.LOW)
     else:
-        GPIO.output(lights, GPIO.LOW)
+        GPIO.output(led_r, GPIO.LOW)
+        GPIO.output(led_y, GPIO.LOW)
         for x in range(0, 3):
             time.sleep(.2)
-            GPIO.output(lights[1], GPIO.HIGH)
+            GPIO.output(led_y, GPIO.HIGH)
             time.sleep(.2)
-            GPIO.output(lights, GPIO.LOW)
+            GPIO.output(led_r, GPIO.LOW)
+            GPIO.output(led_y, GPIO.LOW)
         
 
 def button_pressed(channel):
@@ -145,7 +148,7 @@ def button_pressed(channel):
     record_and_process()
 
 def record_and_process():
-    GPIO.output(lights[1], GPIO.HIGH)
+    GPIO.output(led_y, GPIO.HIGH)
     inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, device)
     inp.setchannels(1)
     inp.setrate(16000)
@@ -173,8 +176,10 @@ if __name__ == "__main__":
     GPIO.cleanup()
     #GPIO.setmode(GPIO.BCM)
     GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
-    GPIO.setup(lights, GPIO.OUT)
-    GPIO.output(lights, GPIO.LOW)
+    GPIO.setup(led_r, GPIO.OUT)
+    GPIO.setup(led_y, GPIO.OUT)
+    GPIO.output(led_r, GPIO.LOW)
+    GPIO.output(led_y, GPIO.LOW)
     while wait_for_sound_hardware() == False:
         print "."
     while internet_on() == False:
@@ -183,9 +188,9 @@ if __name__ == "__main__":
     os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
     for x in range(0, 3):
         time.sleep(.1)
-        GPIO.output(lights[0], GPIO.HIGH)
+        GPIO.output(led_r, GPIO.HIGH)
         time.sleep(.1)
-        GPIO.output(lights[0], GPIO.LOW)
+        GPIO.output(led_r, GPIO.LOW)
 
         # GPIO.wait_for_edge(button, GPIO.RISING)  # Wait for rising edge on button pin
         GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
