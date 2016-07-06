@@ -20,7 +20,8 @@ sudo cp initd_alexa.sh /etc/init.d/alexa
 cd /etc/rc5.d
 sudo ln -s ../init.d/alexa S99alexa
 sudo touch /var/log/alexa.log
-sudo chown pi.pi /var/log/alexa.log
+sudo chown chip.chip /var/log/alexa.log
+
 cd $baselocation
 echo "Enter your ProductID:"
 read productid
@@ -47,4 +48,3 @@ echo "Open http://$ip:5000"
 python ./auth_web.py 
 
 echo "You can now reboot"
-
