@@ -1,17 +1,17 @@
 #! /bin/bash
 
-exec > /var/log/alexa.log 2>&1 
+exec >> /var/log/alexa.log 2>&1 
 case "$1" in
 
 start)
     echo "Starting Alexa..."
-    python /home/chip/AlexaPi/main.py &
+    stdbuf -o0 python /home/chip/AlexaPi/main.py &
 
 ;;
 
 stop)
     echo "Stopping Alexa.."
-    pkill -SIGINT ^main.py$
+    kill -SIGINT $(ps aux | egrep 'AlexaPi/main.py' | grep -v grep | awk '{print $2}')
 ;;
 
 restart|force-reload)

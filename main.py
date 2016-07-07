@@ -3,6 +3,7 @@
 import datetime
 import os
 import signal
+import sys
 import subprocess
 import random
 import time
@@ -132,7 +133,7 @@ def alexa():
         
 
 def button_pressed(channel):
-    print "BUTTON PRESSED"
+    print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
     global playback_subprocess_pid
     if playback_subprocess_pid:
         print "Subprocess PID exists: {} Let's kill it!".format(playback_subprocess_pid)
@@ -168,17 +169,20 @@ def record_and_process():
         val = GPIO.input(button)
 
     # Button is up now
-    print "BUTTON RELEASED"
+    print "Button Released: {}".format(time.strftime("%H:%M:%S"))
     rf = open(path+'recording.wav', 'w') 
     rf.write(audio)
     rf.close()
     alexa()
     
-if __name__ == "__main__":
-    # Set the global playback PID
-    # global playback_subprocess_pid
-    # playback_subprocess_pid = None
 
+def sigint_handler(signal, frame):
+    GPIO.cleanup()           # clean up GPIO on normal exit  
+    print('Exiting cleanly')
+    sys.exit(0)
+
+
+if __name__ == "__main__":
     # Setup GPIOs
     GPIO.cleanup()
 
@@ -208,13 +212,11 @@ if __name__ == "__main__":
 
     # Add event detection now for button
     GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
+    signal.signal(signal.SIGINT, sigint_handler)
 
     print "Please press and hold the button to ask a question"
 
-    try:
-        while True:
-            time.sleep(5)
-    except KeyboardInterrupt:  
-        GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
+    while True:
+        time.sleep(5)
 
     GPIO.cleanup()           # clean up GPIO on normal exit  
