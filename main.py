@@ -37,6 +37,24 @@ path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
 global playback_subprocess_pid
 playback_subprocess_pid = None
 
+def led_happy():
+    for x in range(0, 3):
+        time.sleep(.1)
+        GPIO.output(led_r, GPIO.HIGH)
+        GPIO.output(led_y, GPIO.HIGH)
+        time.sleep(.1)
+        GPIO.output(led_r, GPIO.LOW)
+        GPIO.output(led_y, GPIO.LOW)
+
+def led_error():
+    for x in range(0, 2):
+        time.sleep(.3)
+        GPIO.output(led_r, GPIO.HIGH)
+        GPIO.output(led_y, GPIO.HIGH)
+        time.sleep(.3)
+        GPIO.output(led_r, GPIO.LOW)
+        GPIO.output(led_y, GPIO.LOW)
+
 def wait_for_sound_hardware():
     print "Waiting until the sound card is ready"
     try:
@@ -73,6 +91,23 @@ def gettoken():
         return False
         
 def alexa():
+    # First ensure that we actually recorded something reasonable
+    # sox_process = subprocess.Popen('sox -t .s16 recording.wav -n stat 2>&1|grep Length|awk \'{print $3}\'', stdout=subprocess.PIPE)
+    # out, err = sox_process.communicate()
+    try:
+        sox_process = subprocess.Popen(['/usr/bin/sox', '-t', '.s16', path+'recording.wav', '-n', 'stat'], stderr=subprocess.PIPE)
+        out, err = sox_process.communicate()
+        recording_length = float(re.findall(r'Length.*(\d+\.\d+)', err)[0])
+        if recording_length < 1.5:
+            print "Recording was too short: {}".format(recording_length)
+            led_error()
+            return
+    except:
+        print "Failed to determine the length of the recording"
+        led_error()
+        return
+
+
     GPIO.output(led_r, GPIO.HIGH)
     url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
     headers = {'Authorization' : 'Bearer %s' % gettoken()}
@@ -171,6 +206,7 @@ def record_and_process():
     rf = open(path+'recording.wav', 'w') 
     rf.write(audio)
     rf.close()
+
     alexa()
     
 
@@ -201,16 +237,10 @@ if __name__ == "__main__":
     # NOTE: On CHIP, audio likes to be non-root, while GPIO requires root
     os.system('sudo -i -u chip play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
 
-    for x in range(0, 3):
-        time.sleep(.1)
-        GPIO.output(led_r, GPIO.HIGH)
-        GPIO.output(led_y, GPIO.HIGH)
-        time.sleep(.1)
-        GPIO.output(led_r, GPIO.LOW)
-        GPIO.output(led_y, GPIO.LOW)
+    led_happy()
 
     # Add event detection now for button
-    GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=600) 
+    GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
     signal.signal(signal.SIGINT, sigint_handler)
 
     print "Please press and hold the button to ask a question"
