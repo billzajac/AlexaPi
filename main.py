@@ -113,11 +113,9 @@ def alexa():
         with open(path+"response.mp3", 'wb') as f:
             f.write(audio)
         GPIO.output(led_y, GPIO.LOW)
-        #os.system('play -q {}1sec.mp3 {}response.mp3'.format(path, path))
-        #subprocess.call(['play', '-q', '{}1sec.mp3'.format(path), '{}response.mp3'.format(path)])
-        # The os.setsid() is passed in the argument preexec_fn so it's run after the fork() and before  exec() to run the shell.
-        #playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), close_fds=True, shell=True, preexec_fn=os.setsid)
-        playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
+        # NOTES: On CHIP, audio likes to be non-root, while GPIO requires root
+        #        The os.setsid() is passed in the argument preexec_fn so it's run after the fork() and before  exec() to run the shell.
+        playback_subprocess = subprocess.Popen('sudo -i -u chip play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
         global playback_subprocess_pid
         playback_subprocess_pid = playback_subprocess.pid
         GPIO.output(led_r, GPIO.LOW)
@@ -200,7 +198,8 @@ if __name__ == "__main__":
         print "."
     token = gettoken()
 
-    os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
+    # NOTE: On CHIP, audio likes to be non-root, while GPIO requires root
+    os.system('sudo -i -u chip play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
 
     for x in range(0, 3):
         time.sleep(.1)
@@ -211,7 +210,7 @@ if __name__ == "__main__":
         GPIO.output(led_y, GPIO.LOW)
 
     # Add event detection now for button
-    GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
+    GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=600) 
     signal.signal(signal.SIGINT, sigint_handler)
 
     print "Please press and hold the button to ask a question"
