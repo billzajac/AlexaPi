@@ -1,17 +1,27 @@
 #! /bin/bash
 
-exec > /var/log/alexa.log 2>&1 
 case "$1" in
 
 start)
-    echo "Starting Alexa..."
-    sudo -i -u pi python /home/pi/AlexaPi/main.py &
+    echo "$(date +%Y%m%d_%H%M%S) Starting Alexa" >> /var/log/alexa
+    # Using stdbuf to unbuffer output
+    stdbuf -o0 sudo -i -u pi python /home/pi/AlexaPi/main.py >> /var/log/alexa 2>&1 &
 
 ;;
 
+status)
+    ALEXA_PID=$(ps aux | egrep 'AlexaPi/main.py' | grep -v grep | awk '{print $2}')
+    if [ -z "${ALEXA_PID}" ]; then
+        echo "Alexa Stopped"
+    else
+        echo "Alexa Running with PID: ${ALEXA_PID}"
+    fi
+;;
+
 stop)
-    echo "Stopping Alexa.."
-    pkill -SIGINT ^main.py$
+    ALEXA_PID=$(ps aux | egrep 'AlexaPi/main.py' | grep -v grep | awk '{print $2}')
+    echo "$(date +%Y%m%d_%H%M%S) Stopping Alexa PID: ${ALEXA_PID}" >> /var/log/alexa
+    kill -SIGINT ${ALEXA_PID}
 ;;
 
 restart|force-reload)
