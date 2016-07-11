@@ -34,6 +34,7 @@ device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in areco
 servers = ["127.0.0.1:11211"]
 mc = Client(servers, debug=1)
 path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
+
 global playback_subprocess_pid
 playback_subprocess_pid = None
 
