@@ -36,8 +36,8 @@ mc = Client(servers, debug=1)
 path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
 playback_subprocess = None
 
-global last_button_release
-last_button_release = None
+#global last_button_release
+#last_button_release = None
 
 global playback_subprocess_pid
 playback_subprocess_pid = None
@@ -178,13 +178,13 @@ def button_pressed(channel):
 
     # Ensure that we don't allow ghost button presses
     # I often find a bounce about 2 seconds after the initial
-    global last_button_release
-    if last_button_release:
-        if (datetime.datetime.now() - last_button_release).total_seconds() > 2:
-            last_button_release = None
-        else:
-            print "Button press too close, probably a bounce.  Ignoring."
-            return
+    #global last_button_release
+    #if last_button_release:
+    #    if (datetime.datetime.now() - last_button_release).total_seconds() > 2:
+    #        last_button_release = None
+    #    else:
+    #        print "Button press too close, probably a bounce.  Ignoring."
+    #        return
 
     global playback_subprocess_pid
     if playback_subprocess_pid:
@@ -224,8 +224,8 @@ def record_and_process():
 
     # This is used to ensure that we don't allow ghost button presses
     # I often find a bounce about 2 seconds after the initial
-    global last_button_release
-    last_button_release = datetime.datetime.now()
+    #global last_button_release
+    #last_button_release = datetime.datetime.now()
 
     rf = open(path+'recording.wav', 'w') 
     rf.write(audio)
