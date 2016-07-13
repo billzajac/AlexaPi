@@ -67,11 +67,13 @@ def wait_for_sound_hardware():
     try:
         # USB sound card
         subprocess.check_output("arecord -L|grep {}".format(device), shell=True)
-        print "  USB OK"
+        print "  Recording Device: OK - {}".format(device)
+        print "  Output Device: OK - {}".format(device)
 
         # Bluetooth speaker
-        subprocess.check_output("hcitool con|grep A0:E9:DB:00:73:49", shell=True)
-        print "  Bluetooth OK"
+        # bluetooth_address = 'A0:E9:DB:00:73:49'
+        # subprocess.check_output("hcitool con|grep {}".format(bluetooth_address), shell=True)
+        # print "  Output Device: OK - {}".format(bluetooth_address)
 
         print "Sound Hardware OK"
         return True
