@@ -28,6 +28,7 @@ button_down = 1
 led_red = 19
 led_yellow = 26
 device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
+#device = "default" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
 # Setup
 servers = ["127.0.0.1:11211"]
@@ -35,31 +36,43 @@ mc = Client(servers, debug=1)
 path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
 playback_subprocess = None
 
+global last_button_release
+last_button_release = None
+
 global playback_subprocess_pid
 playback_subprocess_pid = None
 
 def led_happy():
     for x in range(0, 3):
         time.sleep(.1)
-        GPIO.output(led_r, GPIO.HIGH)
-        GPIO.output(led_y, GPIO.HIGH)
+        GPIO.output(led_red, GPIO.HIGH)
+        GPIO.output(led_yellow, GPIO.HIGH)
         time.sleep(.1)
-        GPIO.output(led_r, GPIO.LOW)
-        GPIO.output(led_y, GPIO.LOW)
+        GPIO.output(led_red, GPIO.LOW)
+        GPIO.output(led_yellow, GPIO.LOW)
 
 def led_error():
+    GPIO.output(led_red, GPIO.LOW)
+    GPIO.output(led_yellow, GPIO.LOW)
     for x in range(0, 2):
         time.sleep(.3)
-        GPIO.output(led_r, GPIO.HIGH)
-        GPIO.output(led_y, GPIO.HIGH)
+        GPIO.output(led_red, GPIO.HIGH)
+        GPIO.output(led_yellow, GPIO.HIGH)
         time.sleep(.3)
-        GPIO.output(led_r, GPIO.LOW)
-        GPIO.output(led_y, GPIO.LOW)
+        GPIO.output(led_red, GPIO.LOW)
+        GPIO.output(led_yellow, GPIO.LOW)
 
 def wait_for_sound_hardware():
     print "Waiting until the sound card is ready"
     try:
-        subprocess.check_output("arecord -L|grep plughw:CARD=Device,DEV=0", shell=True)
+        # USB sound card
+        subprocess.check_output("arecord -L|grep {}".format(device), shell=True)
+        print "  USB OK"
+
+        # Bluetooth speaker
+        subprocess.check_output("hcitool con|grep A0:E9:DB:00:73:49", shell=True)
+        print "  Bluetooth OK"
+
         print "Sound Hardware OK"
         return True
     except:
@@ -156,18 +169,21 @@ def alexa():
         playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
         GPIO.output(led_red, GPIO.LOW)
     else:
-        GPIO.output(led_red, GPIO.LOW)
-        GPIO.output(led_yellow, GPIO.LOW)
-        for x in range(0, 3):
-            time.sleep(.2)
-            GPIO.output(led_yellow, GPIO.HIGH)
-            time.sleep(.2)
-            GPIO.output(led_red, GPIO.LOW)
-            GPIO.output(led_yellow, GPIO.LOW)
-        
+        led_error()
 
 def button_pressed(channel):
     print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
+
+    # Ensure that we don't allow ghost button presses
+    # I often find a bounce about 2 seconds after the initial
+    global last_button_release
+    if last_button_release:
+        if (datetime.datetime.now() - last_button_release).total_seconds() > 2:
+            last_button_release = None
+        else:
+            print "Button press too close, probably a bounce.  Ignoring."
+            return
+
     global playback_subprocess_pid
     if playback_subprocess_pid:
         print "Subprocess PID exists: {} Let's kill it!".format(playback_subprocess_pid)
@@ -203,38 +219,45 @@ def record_and_process():
 
     # Button is up now
     print "Button Released: {}".format(time.strftime("%H:%M:%S"))
+
+    # This is used to ensure that we don't allow ghost button presses
+    # I often find a bounce about 2 seconds after the initial
+    global last_button_release
+    last_button_release = datetime.datetime.now()
+
     rf = open(path+'recording.wav', 'w') 
     rf.write(audio)
     rf.close()
     alexa()
     
 if __name__ == "__main__":
-    GPIO.setwarnings(False)
-    GPIO.cleanup()
-    GPIO.setmode(GPIO.BCM)
-
-    GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
-
-    GPIO.setup(led_red, GPIO.OUT)
-    GPIO.setup(led_yellow, GPIO.OUT)
-    GPIO.output(led_red, GPIO.LOW)
-    GPIO.output(led_yellow, GPIO.LOW)
-
-    while wait_for_sound_hardware() == False:
-        print "."
-    while internet_on() == False:
-        print "."
-    token = gettoken()
-
-    os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
-
-    led_happy()
-
-    # Add event detection now for button
-    GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
-
-    print "Please press and hold the button to ask a question"
     try:
+        GPIO.setwarnings(False)
+        GPIO.cleanup()
+        GPIO.setmode(GPIO.BCM)
+
+        GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
+
+        GPIO.setup(led_red, GPIO.OUT)
+        GPIO.setup(led_yellow, GPIO.OUT)
+        GPIO.output(led_red, GPIO.LOW)
+        GPIO.output(led_yellow, GPIO.LOW)
+
+        while wait_for_sound_hardware() == False:
+            print "."
+            time.sleep(1)
+        while internet_on() == False:
+            print "."
+        token = gettoken()
+
+        os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
+
+        led_happy()
+
+        # Add event detection now for button
+        GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
+
+        print "Please press and hold the button to ask a question"
         while True:
             time.sleep(5)
     except KeyboardInterrupt:  

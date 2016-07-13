@@ -1,16 +1,19 @@
-#! /bin/bash
+#!/bin/bash
+
+get_alexa_pid () {
+    export ALEXA_PID=$(ps aux | egrep '^pi.*AlexaPi/main.py' | grep -v grep | awk '{print $2}')
+}
 
 case "$1" in
 
 start)
     echo "$(date +%Y%m%d_%H%M%S) Starting Alexa" >> /var/log/alexa
     # Using stdbuf to unbuffer output
-    stdbuf -o0 sudo -i -u pi python /home/pi/AlexaPi/main.py >> /var/log/alexa 2>&1 &
-
+    sudo -i -u pi stdbuf -o0 python /home/pi/AlexaPi/main.py >> /var/log/alexa 2>&1 &
 ;;
 
 status)
-    ALEXA_PID=$(ps aux | egrep 'AlexaPi/main.py' | grep -v grep | awk '{print $2}')
+    get_alexa_pid
     if [ -z "${ALEXA_PID}" ]; then
         echo "Alexa Stopped"
     else
@@ -19,7 +22,7 @@ status)
 ;;
 
 stop)
-    ALEXA_PID=$(ps aux | egrep 'AlexaPi/main.py' | grep -v grep | awk '{print $2}')
+    get_alexa_pid
     echo "$(date +%Y%m%d_%H%M%S) Stopping Alexa PID: ${ALEXA_PID}" >> /var/log/alexa
     kill -SIGINT ${ALEXA_PID}
 ;;
