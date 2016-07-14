@@ -6,7 +6,7 @@ import signal
 import subprocess
 import random
 import time
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import alsaaudio
 import wave
 import random
@@ -14,7 +14,6 @@ from creds import *
 import requests
 import json
 import re
-from memcache import Client
 
 # Settings
 button = 17 #GPIO Pin with button connected
@@ -31,13 +30,14 @@ device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in areco
 #device = "default" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
 # Setup
-servers = ["127.0.0.1:11211"]
-mc = Client(servers, debug=1)
 path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
 playback_subprocess = None
 
-#global last_button_release
-#last_button_release = None
+global token
+token = None
+
+global token_updated_at
+token_updated_at = datetime.datetime.now() - datetime.timedelta(hours = 2)
 
 global playback_subprocess_pid
 playback_subprocess_pid = None
@@ -92,17 +92,19 @@ def internet_on():
         return False
 
 def gettoken():
-    token = mc.get("access_token")
+    global token_updated_at
+    global token
     refresh = refresh_token
-    if token:
+    if (datetime.datetime.now() - token_updated_at).total_seconds() < 3570:
         return token
     elif refresh:
         payload = {"client_id" : Client_ID, "client_secret" : Client_Secret, "refresh_token" : refresh, "grant_type" : "refresh_token", }
         url = "https://api.amazon.com/auth/o2/token"
         r = requests.post(url, data = payload)
         resp = json.loads(r.text)
-        mc.set("access_token", resp['access_token'], 3570)
-        return resp['access_token']
+        token = resp['access_token']
+        token_updated_at = datetime.datetime.now()
+        return token
     else:
         return False
         
