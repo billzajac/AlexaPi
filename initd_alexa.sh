@@ -1,7 +1,7 @@
 #!/bin/bash
 
 get_alexa_pid () {
-    export ALEXA_PID=$(ps aux | egrep '^pi.*AlexaPi/main.py' | grep -v grep | awk '{print $2}')
+    export ALEXA_PID=$(ps | grep '^main.py' | grep -v grep | awk '{print $1}')
 }
 
 case "$1" in
@@ -9,7 +9,7 @@ case "$1" in
 start)
     echo "$(date +%Y%m%d_%H%M%S) Starting Alexa" >> /var/log/alexa
     # Using stdbuf to unbuffer output
-    sudo -i -u pi stdbuf -o0 python /home/pi/AlexaPi/main.py >> /var/log/alexa 2>&1 &
+    stdbuf -o0 python /home/root/AlexaPi/main.py >> /var/log/alexa 2>&1 &
 ;;
 
 status)
