@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 
-import pprint
 import datetime
-import commands
 import os
 import signal
 import subprocess
@@ -76,6 +74,9 @@ def gettoken():
         return False
         
 def alexa():
+    print "Playing your audio"
+    subprocess.call(['aplay', '{}recording.wav'.format(path)])
+
     url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
     headers = {'Authorization' : 'Bearer %s' % gettoken()}
     d = {
@@ -99,7 +100,7 @@ def alexa():
         }
     }
     print('Sending request to Amazon')
-    with open(path+'recording.wav') as inf:
+    with open('{}recording.wav'.format(path)) as inf:
         files = [
                 ('file', ('request', json.dumps(d), 'application/json; charset=UTF-8')),
                 ('file', ('audio', inf, 'audio/L16; rate=16000; channels=1'))
@@ -111,17 +112,22 @@ def alexa():
             if re.match('.*boundary.*', v):
                 boundary =  v.split("=")[1]
         data = r.content.split(boundary)
+        audio = ""
         for d in data:
             if (len(d) >= 1024):
                 audio = d.split('\r\n\r\n')[1].rstrip('--')
+            else:
+                print "ERROR:"
+                print d
+                print(r.text)
+                return
         with open(path+"response.mp3", 'wb') as f:
             f.write(audio)
         print('Playing {}response.mp3').format(path)
         subprocess.call('lame --decode {}response.mp3 - | aplay -'.format(path), shell=True)
     else:
       print('Unsuccessful post to Amazon: return code: {}').format(r.status_code)
-      pp = pprint.PrettyPrinter(indent=4)
-      pp.pprint(r.json())
+      print(r.text)
 
 
 def button_pressed():
@@ -129,20 +135,32 @@ def button_pressed():
     # We will fork the arecord process to the background and wait until the button is released to kill it
 
     # The os.setsid() is passed in the argument preexec_fn so it's run after the fork() and before  exec() to run the shell.
-    record_subprocess = subprocess.Popen('arecord -f S16_LE -c 1 -r 16000 recording.wav', shell=True, preexec_fn=os.setsid)
+    #record_subprocess = subprocess.Popen('arecord -f S16_LE -c 1 -r 16000 recording.wav', shell=True, preexec_fn=os.setsid)
+    # Intitally record at best possible
+    #record_subprocess = subprocess.Popen('arecord -f cd {}recording_in.wav'.format(path), shell=True, preexec_fn=os.setsid)
+    record_subprocess = subprocess.Popen('arecord --period-size=500 --rate=44100 --format=S16_LE --channels=2  {}recording_in.wav'.format(path), shell=True, preexec_fn=os.setsid)
     record_subprocess_pid = record_subprocess.pid
     record_subprocess_group_id = os.getpgid(record_subprocess_pid)
 
-    status, output = commands.getstatusoutput('/usr/local/lb/Button/bin/getButton')
-    while status != 0:
-            status, output = commands.getstatusoutput('/usr/local/lb/Button/bin/getButton')
+    while True:
+        # keep trying this until it returns 0, then break
+        try:
+            subprocess.check_output('/usr/local/lb/Button/bin/getButton')
+        except subprocess.CalledProcessError:
             time.sleep(0.2)
-    os.killpg(record_subprocess_group_id, signal.SIGKILL) # send the signal to all the process groups (SIGKILL/SIGTERM)
-    # why get fancy.  let's go crazy
-    subprocess.call(['killall', 'arecord'])
+            continue
+        break
+
+    #os.killpg(record_subprocess_group_id, signal.SIGKILL) # send the signal to all the process groups (SIGKILL/SIGTERM)
+    subprocess.call(['killall', '-2', 'arecord']) # why get fancy.  let's go crazy
 
     # Button is up now
     print "Button Released: {}".format(time.strftime("%H:%M:%S"))
+
+    # Increase the volume of the file and downsample to required format
+    print "Increasing volume and downsampling recording"
+    subprocess.call(['sox', '-v', '4.0', '{}recording_in.wav'.format(path), '-r', '16000', '-c', '1', 'recording.wav'.format(path)])
+    sys.exit(0)
 
     alexa()
 
@@ -154,12 +172,19 @@ if __name__ == "__main__":
         print "."
     token = gettoken()
 
+    # Clear any potential buffer for this value by checking it
+    subprocess.call('/usr/local/lb/Button/bin/getButton')
+
+    # Say hello
     os.system('lame --decode {}hello.mp3 - | aplay -'.format(path))
 
     print "Please press and hold the button to ask a question"
 
     while True:
-      status, output = commands.getstatusoutput('/usr/local/lb/Button/bin/getButton')
-      if status != 0:
-        button_pressed()
+        try:
+            subprocess.check_output('/usr/local/lb/Button/bin/getButton')
+        except subprocess.CalledProcessError:
+            button_pressed()
+        except (KeyboardInterrupt, SystemExit):
+            sys.exit(0)
     
