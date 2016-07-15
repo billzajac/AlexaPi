@@ -134,7 +134,7 @@ def alexa():
 
 def button_pressed():
     # Let the user know they can speak now
-    os.system('aplay {}/beep.wav {}/beep.wav'.format(path))
+    os.system('aplay {}/beep.wav {}/beep.wav'.format(path,path))
     print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
     # We will fork the arecord process to the background and wait until the button is released to kill it
 
