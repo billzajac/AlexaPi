@@ -1,13 +1,12 @@
 #! /usr/bin/env python
 
 import datetime
-import command
+import commands
 import os
 import signal
 import subprocess
 import random
 import time
-#import RPi.GPIO as GPIO
 import alsaaudio
 import wave
 import random
@@ -82,16 +81,16 @@ def alexa():
     # First ensure that we actually recorded something reasonable
     # sox_process = subprocess.Popen('sox -t .s16 recording.wav -n stat 2>&1|grep Length|awk \'{print $3}\'', stdout=subprocess.PIPE)
     # out, err = sox_process.communicate()
-    try:
-        sox_process = subprocess.Popen(['/usr/bin/sox', '-t', '.s16', path+'recording.wav', '-n', 'stat'], stderr=subprocess.PIPE)
-        out, err = sox_process.communicate()
-        recording_length = float(re.findall(r'Length.*(\d+\.\d+)', err)[0])
-        if recording_length < 1.5:
-            print "Recording was too short: {}".format(recording_length)
-            return
-    except:
-        print "Failed to determine the length of the recording"
-        return
+    #try:
+    #    sox_process = subprocess.Popen(['/usr/bin/sox', '-t', '.s16', path+'recording.wav', '-n', 'stat'], stderr=subprocess.PIPE)
+    #    out, err = sox_process.communicate()
+    #    recording_length = float(re.findall(r'Length.*(\d+\.\d+)', err)[0])
+    #    if recording_length < 1:
+    #        print "Recording was too short: {}".format(recording_length)
+    #        return
+    #except:
+    #    print "Failed to determine the length of the recording"
+    #    return
 
     url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
     headers = {'Authorization' : 'Bearer %s' % gettoken()}
@@ -167,6 +166,7 @@ def button_pressed():
 
     record_and_process()
 
+# TODO: figure out why this is not recording
 def record_and_process():
     inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, device)
     inp.setchannels(1)
@@ -178,13 +178,12 @@ def record_and_process():
     if l:
         audio += data
 
-    status, output = command.getstatusoutput('/usr/local/lb/Button/bin/getButton')
+    status, output = commands.getstatusoutput('/usr/local/lb/Button/bin/getButton')
     while status != 0:
         l, data = inp.read()
         if l:
             audio += data
-        val = GPIO.input(button)
-        status, output = command.getstatusoutput('/usr/local/lb/Button/bin/getButton')
+        status, output = commands.getstatusoutput('/usr/local/lb/Button/bin/getButton')
 
     # Button is up now
     print "Button Released: {}".format(time.strftime("%H:%M:%S"))
@@ -212,7 +211,7 @@ if __name__ == "__main__":
     print "Please press and hold the button to ask a question"
 
     while True:
-      status, output = command.getstatusoutput('/usr/local/lb/Button/bin/getButton')
+      status, output = commands.getstatusoutput('/usr/local/lb/Button/bin/getButton')
       if status != 0:
         button_pressed()
     
