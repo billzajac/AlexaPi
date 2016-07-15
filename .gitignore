@@ -59,5 +59,6 @@ target/
 # Specific to this app
 creds.py
 out.wav
+recording_in.wav
 recording.wav
 response.mp3
