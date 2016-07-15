@@ -122,7 +122,8 @@ def alexa():
                 audio = d.split('\r\n\r\n')[1].rstrip('--')
             else:
                 print 'Non-audio returned data: {}'.format(d)
-        with open('response.mp3'.format(path), 'wb') as f:
+        print 'Saving response mp3'
+        with open('{}response.mp3'.format(path), 'wb') as f:
             f.write(audio)
         print('Playing {}response.mp3').format(path)
         subprocess.call('lame --decode {}response.mp3 - | aplay -'.format(path), shell=True)
@@ -133,7 +134,7 @@ def alexa():
 
 def button_pressed():
     # Let the user know they can speak now
-    os.system('aplay {}/beep.wav'.format(path))
+    os.system('aplay {}/beep.wav {}/beep.wav'.format(path))
     print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
     # We will fork the arecord process to the background and wait until the button is released to kill it
 
