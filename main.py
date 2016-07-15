@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import datetime
+import command
 import os
 import signal
 import subprocess
@@ -15,19 +16,8 @@ import requests
 import json
 import re
 
-# Settings
-button = 17 #GPIO Pin with button connected
 
-# Button config (pull low to 0 for unpressed) - GPIO.input(button)
-button_pull_up_down = GPIO.PUD_DOWN
-button_edge_detect = GPIO.RISING
-button_up = 0
-button_down = 1
-
-led_red = 19
-led_yellow = 26
-device = "plughw:CARD=Device,DEV=0" # Name of your microphone/soundcard in arecord -L # doesn't crash
-#device = "default" # Name of your microphone/soundcard in arecord -L # doesn't crash
+device = "sysdefault:CARD=mxsbuiltinaudio" # Name of your microphone/soundcard in arecord -L # doesn't crash
 
 # Setup
 path = os.path.realpath(__file__).rstrip(os.path.basename(__file__))
@@ -41,26 +31,6 @@ token_updated_at = datetime.datetime.now() - datetime.timedelta(hours = 2)
 
 global playback_subprocess_pid
 playback_subprocess_pid = None
-
-def led_happy():
-    for x in range(0, 3):
-        time.sleep(.1)
-        GPIO.output(led_red, GPIO.HIGH)
-        GPIO.output(led_yellow, GPIO.HIGH)
-        time.sleep(.1)
-        GPIO.output(led_red, GPIO.LOW)
-        GPIO.output(led_yellow, GPIO.LOW)
-
-def led_error():
-    GPIO.output(led_red, GPIO.LOW)
-    GPIO.output(led_yellow, GPIO.LOW)
-    for x in range(0, 2):
-        time.sleep(.3)
-        GPIO.output(led_red, GPIO.HIGH)
-        GPIO.output(led_yellow, GPIO.HIGH)
-        time.sleep(.3)
-        GPIO.output(led_red, GPIO.LOW)
-        GPIO.output(led_yellow, GPIO.LOW)
 
 def wait_for_sound_hardware():
     print "Waiting until the sound card is ready"
@@ -118,14 +88,11 @@ def alexa():
         recording_length = float(re.findall(r'Length.*(\d+\.\d+)', err)[0])
         if recording_length < 1.5:
             print "Recording was too short: {}".format(recording_length)
-            led_error()
             return
     except:
         print "Failed to determine the length of the recording"
-        led_error()
         return
 
-    GPIO.output(led_red, GPIO.HIGH)
     url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
     headers = {'Authorization' : 'Bearer %s' % gettoken()}
     d = {
@@ -164,18 +131,15 @@ def alexa():
                 audio = d.split('\r\n\r\n')[1].rstrip('--')
         with open(path+"response.mp3", 'wb') as f:
             f.write(audio)
-        GPIO.output(led_yellow, GPIO.LOW)
         #os.system('play -q {}1sec.mp3 {}response.mp3'.format(path, path))
         #subprocess.call(['play', '-q', '{}1sec.mp3'.format(path), '{}response.mp3'.format(path)])
         # The os.setsid() is passed in the argument preexec_fn so it's run after the fork() and before  exec() to run the shell.
         #playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), close_fds=True, shell=True, preexec_fn=os.setsid)
         global playback_subprocess
-        playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
-        GPIO.output(led_red, GPIO.LOW)
-    else:
-        led_error()
+        #playback_subprocess = subprocess.Popen('play -q {}1sec.mp3 {}response.mp3'.format(path, path), shell=True, preexec_fn=os.setsid)
+        playback_subprocess = subprocess.Popen('lame --decode {}response.mp3 - | aplay -'.format(path), shell=True, preexec_fn=os.setsid)
 
-def button_pressed(channel):
+def button_pressed():
     print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
 
     # Ensure that we don't allow ghost button presses
@@ -204,7 +168,6 @@ def button_pressed(channel):
     record_and_process()
 
 def record_and_process():
-    GPIO.output(led_yellow, GPIO.HIGH)
     inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, device)
     inp.setchannels(1)
     inp.setrate(16000)
@@ -215,11 +178,13 @@ def record_and_process():
     if l:
         audio += data
 
-    while GPIO.input(button) == button_down:
+    status, output = command.getstatusoutput('/usr/local/lb/Button/bin/getButton')
+    while status != 0:
         l, data = inp.read()
         if l:
             audio += data
         val = GPIO.input(button)
+        status, output = command.getstatusoutput('/usr/local/lb/Button/bin/getButton')
 
     # Button is up now
     print "Button Released: {}".format(time.strftime("%H:%M:%S"))
@@ -233,38 +198,21 @@ def record_and_process():
     rf.write(audio)
     rf.close()
     alexa()
-    
+
 if __name__ == "__main__":
-    try:
-        GPIO.setwarnings(False)
-        GPIO.cleanup()
-        GPIO.setmode(GPIO.BCM)
+    while wait_for_sound_hardware() == False:
+        print "."
+        time.sleep(1)
+    while internet_on() == False:
+        print "."
+    token = gettoken()
 
-        GPIO.setup(button, GPIO.IN, pull_up_down=button_pull_up_down)
+    os.system('lame --decode {}hello.mp3 - | aplay -'.format(path))
 
-        GPIO.setup(led_red, GPIO.OUT)
-        GPIO.setup(led_yellow, GPIO.OUT)
-        GPIO.output(led_red, GPIO.LOW)
-        GPIO.output(led_yellow, GPIO.LOW)
+    print "Please press and hold the button to ask a question"
 
-        while wait_for_sound_hardware() == False:
-            print "."
-            time.sleep(1)
-        while internet_on() == False:
-            print "."
-        token = gettoken()
-
-        os.system('play -q {}1sec.mp3 {}hello.mp3'.format(path, path))
-
-        led_happy()
-
-        # Add event detection now for button
-        GPIO.add_event_detect(button, button_edge_detect, callback=button_pressed, bouncetime=300) 
-
-        print "Please press and hold the button to ask a question"
-        while True:
-            time.sleep(5)
-    except KeyboardInterrupt:  
-        GPIO.cleanup()       # clean up GPIO on CTRL+C exit  
-
-    GPIO.cleanup()           # clean up GPIO on normal exit  
+    while True:
+      status, output = command.getstatusoutput('/usr/local/lb/Button/bin/getButton')
+      if status != 0:
+        button_pressed()
+    
