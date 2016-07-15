@@ -2,6 +2,7 @@
 
 import datetime
 import os
+import sys
 import signal
 import subprocess
 import random
@@ -74,8 +75,11 @@ def gettoken():
         return False
         
 def alexa():
-    print "Playing your audio"
-    subprocess.call(['aplay', '{}recording.wav'.format(path)])
+    # DEBUG
+    #print "Playing your original audio"
+    #subprocess.call(['aplay', '{}recording_in.wav'.format(path)])
+    #print "Playing your louder audio"
+    #subprocess.call(['aplay', '{}recording.wav'.format(path)])
 
     url = 'https://access-alexa-na.amazon.com/v1/avs/speechrecognizer/recognize'
     headers = {'Authorization' : 'Bearer %s' % gettoken()}
@@ -117,11 +121,8 @@ def alexa():
             if (len(d) >= 1024):
                 audio = d.split('\r\n\r\n')[1].rstrip('--')
             else:
-                print "ERROR:"
-                print d
-                print(r.text)
-                return
-        with open(path+"response.mp3", 'wb') as f:
+                print 'Non-audio returned data: {}'.format(d)
+        with open('response.mp3'.format(path), 'wb') as f:
             f.write(audio)
         print('Playing {}response.mp3').format(path)
         subprocess.call('lame --decode {}response.mp3 - | aplay -'.format(path), shell=True)
@@ -131,6 +132,8 @@ def alexa():
 
 
 def button_pressed():
+    # Let the user know they can speak now
+    os.system('aplay {}/beep.wav'.format(path))
     print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
     # We will fork the arecord process to the background and wait until the button is released to kill it
 
@@ -138,7 +141,9 @@ def button_pressed():
     #record_subprocess = subprocess.Popen('arecord -f S16_LE -c 1 -r 16000 recording.wav', shell=True, preexec_fn=os.setsid)
     # Intitally record at best possible
     #record_subprocess = subprocess.Popen('arecord -f cd {}recording_in.wav'.format(path), shell=True, preexec_fn=os.setsid)
-    record_subprocess = subprocess.Popen('arecord --period-size=500 --rate=44100 --format=S16_LE --channels=2  {}recording_in.wav'.format(path), shell=True, preexec_fn=os.setsid)
+    #record_subprocess = subprocess.Popen('arecord --period-size=500 --rate=44100 --format=S16_LE --channels=2  {}recording_in.wav'.format(path), shell=True, preexec_fn=os.setsid)
+    #record_subprocess = subprocess.Popen('arecord --rate=44100 --format=S16_LE --channels=2 -t raw | sox -t raw -e signed-integer -r 16000 -c 1 -v 8.0 - {}recording.wav'.format(path), shell=True, preexec_fn=os.setsid)
+    record_subprocess = subprocess.Popen('arecord --rate=16000 --format=S16_LE --channels=1 -t wav {}recording_in.wav'.format(path), shell=True, preexec_fn=os.setsid)
     record_subprocess_pid = record_subprocess.pid
     record_subprocess_group_id = os.getpgid(record_subprocess_pid)
 
@@ -159,8 +164,9 @@ def button_pressed():
 
     # Increase the volume of the file and downsample to required format
     print "Increasing volume and downsampling recording"
-    subprocess.call(['sox', '-v', '4.0', '{}recording_in.wav'.format(path), '-r', '16000', '-c', '1', 'recording.wav'.format(path)])
-    sys.exit(0)
+    #subprocess.call(['sox', '-v', '8.0', '{}recording_in.wav'.format(path), '-r', '16000', '-c', '1', 'recording.wav'.format(path)])
+    #subprocess.call(['sox', '-v', '50.0', '{}recording_in.wav'.format(path), '-r', '16000', '{}recording.wav'.format(path)])
+    subprocess.call(['sox', '-v', '50.0', '{}recording_in.wav'.format(path), '{}recording.wav'.format(path)])
 
     alexa()
 
