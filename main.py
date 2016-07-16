@@ -131,10 +131,14 @@ def alexa():
       print('Unsuccessful post to Amazon: return code: {}').format(r.status_code)
       print(r.text)
 
+    subprocess.call('/usr/local/lb/LEDcolor/bin/setColor off')
+
 
 def button_pressed():
     # Let the user know they can speak now
-    os.system('aplay {}/beep.wav {}/beep.wav'.format(path,path))
+    # os.system('aplay {}/beep.wav {}/beep.wav'.format(path,path))
+    subprocess.call('/usr/local/lb/LEDcolor/bin/setColor blue')
+
     print "Button Pressed: {}".format(time.strftime("%H:%M:%S"))
     # We will fork the arecord process to the background and wait until the button is released to kill it
 
@@ -161,6 +165,7 @@ def button_pressed():
     subprocess.call(['killall', '-2', 'arecord']) # why get fancy.  let's go crazy
 
     # Button is up now
+    subprocess.call('/usr/local/lb/LEDcolor/bin/setColor green')
     print "Button Released: {}".format(time.strftime("%H:%M:%S"))
 
     # Increase the volume of the file and downsample to required format
@@ -172,6 +177,7 @@ def button_pressed():
     alexa()
 
 if __name__ == "__main__":
+    subprocess.call('/usr/local/lb/LEDcolor/bin/setColor off')
     while wait_for_sound_hardware() == False:
         print "."
         time.sleep(1)
