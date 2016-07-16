@@ -165,7 +165,7 @@ def button_pressed():
     subprocess.call(['killall', '-2', 'arecord']) # why get fancy.  let's go crazy
 
     # Button is up now
-    subprocess.call('[/usr/local/lb/LEDcolor/bin/setColor', 'green'])
+    subprocess.call(['/usr/local/lb/LEDcolor/bin/setColor', 'green'])
     print "Button Released: {}".format(time.strftime("%H:%M:%S"))
 
     # Increase the volume of the file and downsample to required format
